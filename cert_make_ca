@@ -1,0 +1,22 @@
+#!/bin/bash
+
+read -r -p "Name for your CA certificate: "
+name="$REPLY"
+if [ -z "$name" ]; then
+    echo "Aborting due to empty name." >&2
+    exit 1
+fi
+
+read -r -s -p "Password for your CA certificate: "
+password="$REPLY"
+printf "\n"
+read -r -s -p "Repeat password for your CA certificate: "
+password_check="$REPLY"
+printf "\n"
+if [ "$password" != "$password_check" ]; then
+    echo "Repeated password does not match. Aborting." >&2
+    exit 1
+fi
+
+PASS="$password" openssl genrsa -des3 -out "$name.key" --passout env:PASS 2048
+PASS="$password" openssl req -x509 -new -nodes -key "$name.key" --passin env:PASS -sha256 -days 3650 -out "$name.pem"

@@ -1,0 +1,30 @@
+#!/bin/bash
+
+if [ "$#" -ne 2 ]; then
+  echo "Usage: $0 CA_CERT_NAME DOMAIN" >&2
+  echo "  CA_CERT_NAME: Base name of CA certificate files (.key and .pem)"
+  echo "  DOMAIN: Domain for the certificate you are creating"
+  echo "Will output DOMAIN.key and DOMAIN.crt files"
+  exit 1
+fi
+
+ca_basename="$1"
+domain="$2"
+cert_file=${domain//\*\./}
+
+openssl genrsa -out "$cert_file.key" 2048
+openssl req -new -key "$cert_file.key" -out "$cert_file.csr"
+
+cat > "$cert_file.ext" << EOF
+authorityKeyIdentifier=keyid,issuer
+basicConstraints=CA:FALSE
+keyUsage = digitalSignature, nonRepudiation, keyEncipherment, dataEncipherment
+subjectAltName = @alt_names
+[alt_names]
+DNS.1 = $domain
+EOF
+
+# openssl x509 -req -in "$cert_file.csr" -CA "$ca_basename.pem" -CAkey "$ca_basename.key" -CAcreateserial -out "$cert_file.crt" -days 365 -sha256 -extfile "$cert_file.ext"
+openssl x509 -req -in "$cert_file.csr" -CA "$ca_basename.pem" -CAkey "$ca_basename.key" -out "$cert_file.crt" -days 365 -sha256 -extfile "$cert_file.ext"
+rm "$cert_file.csr"
+rm "$cert_file.ext"
